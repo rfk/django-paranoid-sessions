@@ -298,7 +298,7 @@ class SessionFingerprint(object):
         This duplicates the cookie-setting logic in the session middleware,
         so it will expire under the same rules as the session itself.
         """
-        nonce = list(self.get_valid_nonces())[-1]
+        nonce = list(self.get_valid_nonces())[-2]
         if request.session.get_expire_at_browser_close():
             max_age = None
             expires = None

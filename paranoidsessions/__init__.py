@@ -89,6 +89,8 @@ The following settings are available:
 
 """
 
+__version__ = "0.1.0"
+
 import time
 
 from django.utils.http import cookie_date

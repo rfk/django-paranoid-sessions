@@ -47,7 +47,9 @@ The following settings are available:
   PSESSION_CHECK_HEADERS:  List of headers to check on each request.  The
           session will be cleared if any of these headers vary from those
           sent when the session was initially created.
-          Default:  ["REMOTE_ADDR","HTTP_X_FORWARDED_FOR"]
+
+          Default:  ["REMOTE_ADDR","HTTP_X_FORWARDED_FOR","HTTP_USER_AGENT"]
+
 
   PSESSION_NONCE_TIMEOUT:  Time (in seconds) after which a new nonce will be
           generated.  The client must return a valid nonce with each request
@@ -109,7 +111,8 @@ from django.conf import settings
 MAX_NONCE_SEED = 18446744073709551616L     # 2 << 63
 
 if not hasattr(settings,"PSESSION_CHECK_HEADERS"):
-    settings.PSESSION_CHECK_HEADERS = ("REMOTE_ADDR","HTTP_X_FORWARDED_FOR",)
+    check_headers = ("REMOTE_ADDR","HTTP_X_FORWARDED_FOR","HTTP_USER_AGENT",)
+    settings.PSESSION_CHECK_HEADERS = check_headers
 if not hasattr(settings,"PSESSION_NONCE_TIMEOUT"):
     settings.PSESSION_NONCE_TIMEOUT = 0
 if not hasattr(settings,"PSESSION_NONCE_WINDOW"):

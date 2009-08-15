@@ -7,7 +7,6 @@ from django.http import HttpResponse
 from django.conf import settings
 
 import paranoidsessions
-clear_session = paranoidsessions.clear_session
 
 def test_view(request):
     if "timestamp" not in request.session:
@@ -16,7 +15,13 @@ def test_view(request):
 
 urlpatterns = patterns('',
   (r'^$', test_view),
+  (r'^safeview$', test_view),
 )
+
+def request_filter(request):
+    if "safe" in request.path:
+        return False
+    return True
 
 
 def with_settings(**new_settings):
@@ -43,7 +48,7 @@ class TestParanoidSessions(TestCase):
 
     def setUp(self):
         self.orig_clear_session = settings.PSESSION_CLEAR_SESSION_FUNCTION
-        settings.PSESSION_CLEAR_SESSION_FUNCTION = clear_session
+        settings.PSESSION_CLEAR_SESSION_FUNCTION = lambda r: r.session.flush()
 
     def tearDown(self):
         settings.PSESSION_CLEAR_SESSION_FUNCTION = self.orig_clear_session
@@ -186,4 +191,20 @@ class TestParanoidSessions(TestCase):
         r = self.client.get("/",HTTP_USER_AGENT="goodguy",REMOTE_ADDR="xxx")
         session3 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
         self.assertEqual(session1,session3)
+
+    @with_settings(PSESSION_REQUEST_FILTER_FUNCTION=request_filter,PSESSION_CHECK_HEADERS=["HTTP_USER_AGENT"])
+    def test_request_filter(self):
+        r = self.client.get("/")
+        session1 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        nonce1 = self.client.cookies[settings.PSESSION_COOKIE_NAME].value
+        r = self.client.get("/safeview",HTTP_USER_AGENT="attacker")
+        session2 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        nonce2 = self.client.cookies[settings.PSESSION_COOKIE_NAME].value
+        self.assertEqual(session1,session2)
+        self.assertEqual(nonce1,nonce2)
+        r = self.client.get("/",HTTP_USER_AGENT="attacker")
+        session2 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        nonce2 = self.client.cookies[settings.PSESSION_COOKIE_NAME].value
+        self.assertNotEqual(session1,session2)
+        self.assertNotEqual(nonce1,nonce2)
 

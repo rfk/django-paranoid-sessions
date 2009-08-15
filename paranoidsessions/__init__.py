@@ -85,7 +85,14 @@ The following settings are available:
   PSESSION_CLEAR_SESSION_FUNCTION:  Function called to clear the session if a
           potential attack is detected.  An importable name or callable object
           may be given, taking a request object as its only argument.
-          Default:  paranoidsessions.clear_session
+          Default:  lambda req: req.session.flush()
+
+  PSESSION_REQUEST_FILTER_FUNCTION:  Function to filter requests to be checked.
+          Any requests for which this function returns False will not be
+          subjected to paranoid validation.  This may be helpful for reducing
+          processing overhead on low-risk targets such as media files, but
+          will give an attacker more opportunities to compromise a given nonce.
+          Default:  lambda req: True
 
 """
 
@@ -115,12 +122,16 @@ if not hasattr(settings,"PSESSION_SESSION_KEY"):
     settings.PSESSION_SESSION_KEY = "PARANOID_SESSION_DATA"
 if not hasattr(settings,"PSESSION_COOKIE_NAME"):
     settings.PSESSION_COOKIE_NAME = "sessionnonce"
+if hasattr(settings,"PSESSION_REQUEST_FILTER_FUNCTION"):
+    request_filter = get_callable(settings.PSESSION_REQUEST_FILTER_FUNCTION)
+    settings.PSESSION_REQUEST_FILTER_FUNCTION = request_filter
+else:
+    settings.PSESSION_REQUEST_FILTER_FUNCTION = lambda req: True
 if hasattr(settings,"PSESSION_CLEAR_SESSION_FUNCTION"):
     clear_session = get_callable(settings.PSESSION_CLEAR_SESSION_FUNCTION)
+    settings.PSESSION_CLEAR_SESSION_FUNCTION = clear_session
 else:
-    def clear_session(request):
-        request.session.flush()
-settings.PSESSION_CLEAR_SESSION_FUNCTION = clear_session
+    settings.PSESSION_CLEAR_SESSION_FUNCTION = lambda req: req.session.flush()
 
 
 class NonceStream(object):
@@ -297,23 +308,28 @@ class ParanoidSessionMiddleware(object):
     """
 
     def process_request(self,request):
-        try:
-            fingerprint = request.session[settings.PSESSION_SESSION_KEY]
-        except KeyError:
-            fingerprint = SessionFingerprint(request)
-            request.session[settings.PSESSION_SESSION_KEY] = fingerprint
-            request.session.save()
+        if settings.PSESSION_REQUEST_FILTER_FUNCTION(request):
+            try:
+                fingerprint = request.session[settings.PSESSION_SESSION_KEY]
+            except KeyError:
+                fingerprint = SessionFingerprint(request)
+                request.session[settings.PSESSION_SESSION_KEY] = fingerprint
+                request.session.save()
+            else:
+                if not fingerprint.check_request(request):
+                    settings.PSESSION_CLEAR_SESSION_FUNCTION(request)
+            request.session.paranoid = True
         else:
-            if not fingerprint.check_request(request):
-                settings.PSESSION_CLEAR_SESSION_FUNCTION(request)
+            request.session.paranoid = False
 
     def process_response(self,request,response):
-        try:
-            fingerprint = request.session[settings.PSESSION_SESSION_KEY]
-        except KeyError:
-            fingerprint = SessionFingerprint(request)
-            request.session[settings.PSESSION_SESSION_KEY] = fingerprint
-        fingerprint.process_response(request,response)
+        if request.session.paranoid:
+            try:
+                fingerprint = request.session[settings.PSESSION_SESSION_KEY]
+            except KeyError:
+                fingerprint = SessionFingerprint(request)
+                request.session[settings.PSESSION_SESSION_KEY] = fingerprint
+            fingerprint.process_response(request,response)
         return response
 
 

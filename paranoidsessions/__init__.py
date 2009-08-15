@@ -260,8 +260,9 @@ class SessionFingerprint(object):
                 nonces.next()
         #  Yield the current nonce
         yield nonces.next()
-        # TODO: will out-of-order session writes ever result in the client
-        #       being ahead of us in the nonce stream?
+        #  I belive that races between Django processes could result in the
+        #  client actually being one step ahead of the server.
+        yield nonces.next()
 
     def set_nonce_cookie(self,request,response):
         """Set the nonce cookie on the given response.

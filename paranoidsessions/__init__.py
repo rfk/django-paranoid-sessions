@@ -12,9 +12,10 @@ employed are:
   * periodic cycling of session keys
 
 As always, there's a tradeoff here - these security measures involve increased
-processing per request and more frequent writes to the session store.  But by
-adjusting the various settings offered by this module, you should be able to
-find a compromise that's suitable for your project.
+processing per request and more frequent writes to the session store.  You also
+run the risk of terminating valid sessions that happen to look suspicious.
+But by adjusting the various settings offered by this module, you should be
+able to find a compromise that's suitable for your project.
 
 To use this module, simply include it in MIDDLEWARE_CLASSES after the standard
 session middleware:

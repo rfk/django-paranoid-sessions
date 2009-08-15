@@ -327,7 +327,9 @@ class ParanoidSessionMiddleware(object):
             request.session.paranoid = False
 
     def process_response(self,request,response):
-        if request.session.paranoid:
+        if not hasattr(request,"session"):
+            return response
+        if getattr(request.session,"paranoid",True):
             try:
                 fingerprint = request.session[settings.PSESSION_SESSION_KEY]
             except KeyError:

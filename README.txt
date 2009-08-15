@@ -47,7 +47,9 @@ The following settings are available:
   PSESSION_CHECK_HEADERS:  List of headers to check on each request.  The
           session will be cleared if any of these headers vary from those
           sent when the session was initially created.
-          Default:  ["REMOTE_ADDR","HTTP_X_FORWARDED_FOR"]
+
+          Default:  ["REMOTE_ADDR","HTTP_X_FORWARDED_FOR","HTTP_USER_AGENT"]
+
 
   PSESSION_NONCE_TIMEOUT:  Time (in seconds) after which a new nonce will be
           generated.  The client must return a valid nonce with each request
@@ -55,35 +57,61 @@ The following settings are available:
           decrease security but reduce the frequency of writes to the session
           store.  Setting it to zero means a new nonce is generated on every
           request.  Setting it to None will disable the use of nonces entirely.
+
           Default:  0
+
 
   PSESSION_NONCE_WINDOW:  Number of nonces prior to the current nonce that will
           still be accepted as valid.  This corresponds to the number of nonce
           updates that could be "in flight" between the server and client at
-          any given time.  If you need to set it to any more than 1, your site
-          has some serious performance issues.
+          any given time.  Setting it to zero will break overlapping requests.
+
+          If you need to set it to any more than 1, your site has some serious
+          performance issues.  Not that Django's built-in development server
+          *does* have some serious performance issues; set it to at least 3
+          for your development environment.
+
           Default:  1
+
 
   PSESSION_NONCE_WINDOW_TIMEOUT:  Time (in seconds) within which old nonces
           are accepted.  This window should be as small as possible, but is
           necessary if users will perform multiple overlapping requests.
+
           Default:  0.5
+
 
   PSESSION_KEY_TIMEOUT:  Time (in seconds) after which the session key will
           be cycled.  This should only be needed if nonces are not in use;
           the difference is that key cycling doesn't require the client to
           send a separate nonce cookie.  Set it to None to disable key cycling.
+
           Default:  None
+
 
   PSESSION_SESSION_KEY:  Session key under which the request-tracking and
           verification data for this module should be stored.
+
           Default:  "PARANOID_SESSION_DATA"
 
+
   PSESSION_COOKIE_NAME:  Name of cookie used for the per-request nonce.
+
           Default:  "sessionnonce"
+
 
   PSESSION_CLEAR_SESSION_FUNCTION:  Function called to clear the session if a
           potential attack is detected.  An importable name or callable object
           may be given, taking a request object as its only argument.
-          Default:  paranoidsessions.clear_session
+
+          Default:  lambda req: req.session.flush()
+
+
+  PSESSION_REQUEST_FILTER_FUNCTION:  Function to filter requests to be checked.
+          Any requests for which this function returns False will not be
+          subjected to paranoid validation.  This may be helpful for reducing
+          processing overhead on low-risk targets such as media files, but
+          will give an attacker more opportunities to compromise a given nonce.
+
+          Default:  lambda req: True
 

@@ -276,10 +276,11 @@ class SessionFingerprint(object):
     def get_valid_nonces(self):
         """Get a sequence of all currently valid nonces."""
         now = time.time()
-        window = settings.PSESSION_NONCE_WINDOW
         nonces = self.nonce_stream.nonces()
+        window = settings.PSESSION_NONCE_WINDOW
+        timeout = settings.PSESSION_NONCE_WINDOW_TIMEOUT
         #  Yield or skip old nonces, depending on window timeout
-        if now < self.last_nonce_time + settings.PSESSION_NONCE_WINDOW_TIMEOUT:
+        if timeout is None or now < self.last_nonce_time + timeout:
             for _ in xrange(window):
                 yield nonces.next()
         else:

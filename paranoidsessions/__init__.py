@@ -82,6 +82,7 @@ The following settings are available to tweak the behaviour of this module:
   PSESSION_NONCE_WINDOW_TIMEOUT:  Time (in seconds) within which old nonces
           are accepted.  This window should be as small as possible, but is
           necessary if users will perform multiple overlapping requests.
+          Setting it to None means the window never times out.
 
           Default:  0.5
 
@@ -119,6 +120,15 @@ The following settings are available to tweak the behaviour of this module:
           will give an attacker more opportunities to compromise a given nonce.
 
           Default:  lambda req: True
+
+
+If you expect a high density of overlapping requests, the default settings of
+this module are probably too strict and will result in valid user sessions
+being terminated.  Consider some of the following adjustments:
+
+    * set NONCE_TIMEOUT to a small positive value e.g. 1 second
+    * increase the NONCE_WINDOW and NONCE_WINDOW_TIMEOUT values
+    * filter out requests to MEDIA_URL to reduce nonce cycling
 
 """
 
@@ -181,7 +191,7 @@ class NonceStream(object):
         self.state = md5_constructor("%s%s" % seed).hexdigest()
 
     def nonces(self):
-        """Generate producing sequence of nonce values."""
+        """Generator producing sequence of nonce values."""
         state = self.state
         while True:
             yield state
@@ -289,7 +299,8 @@ class SessionFingerprint(object):
         #  Yield the current nonce
         yield nonces.next()
         #  I belive that races between Django processes could result in the
-        #  client actually being one step ahead of the server.
+        #  client actually being one step ahead of the server.  Not likely,
+        #  but it could happen.
         yield nonces.next()
 
     def set_nonce_cookie(self,request,response):

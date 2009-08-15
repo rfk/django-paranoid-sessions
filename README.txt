@@ -120,3 +120,12 @@ The following settings are available to tweak the behaviour of this module:
 
           Default:  lambda req: True
 
+
+If you expect a high density of overlapping requests, the default settings of
+this module are probably too strict and will result in valid user sessions
+being terminated.  Consider some of the following adjustments:
+
+    * set NONCE_TIMEOUT to a small positive value e.g. 1 second
+    * increase the NONCE_WINDOW and NONCE_WINDOW_TIMEOUT values
+    * filter out requests to MEDIA_URL to reduce nonce cycling
+

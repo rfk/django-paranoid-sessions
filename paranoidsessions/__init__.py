@@ -10,6 +10,8 @@ employed are:
   * HTTP header fingerprinting (e.g. REMOTE_ADDR, HTTP_USER_AGENT)
   * per-request nonces (with configurable timeout and duplicate window)
   * periodic cycling of session keys
+  * maintaining a second key for secure connections
+  * marking session keys as "HttpOnly"
 
 As always, there's a tradeoff here - these security measures involve increased
 processing per request and more frequent writes to the session store.  You also
@@ -105,6 +107,15 @@ The following settings are available to tweak the behaviour of this module:
   PSESSION_COOKIE_NAME:  Name of cookie used for the per-request nonce.
 
           Default:  "sessionnonce"
+
+
+  PSESSION_SECURE_COOKIE_NAME:  Name of cookie used for the additional "secure
+          connections only" session key.  This additional information is only
+          passed between the server and client over a secure connection; if
+          a sniffer or man-in-the-middle attack compromises all HTTP traffic,
+          they still cannot forge session requests over HTTPS.
+
+          Default:  "sessionid_https"
 
 
   PSESSION_CLEAR_SESSION_FUNCTION:  Function called to clear the session if a

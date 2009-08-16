@@ -160,6 +160,10 @@ if not hasattr(settings,"PSESSION_SESSION_KEY"):
     settings.PSESSION_SESSION_KEY = "PARANOID_SESSION_DATA"
 if not hasattr(settings,"PSESSION_COOKIE_NAME"):
     settings.PSESSION_COOKIE_NAME = "sessionnonce"
+if not hasattr(settings,"PSESSION_SECURE_COOKIE_NAME"):
+    settings.PSESSION_SECURE_COOKIE_NAME = "sessionid_https"
+if not hasattr(settings,"PSESSION_COOKIE_HTTPONLY"):
+    settings.PSESSION_COOKIE_HTTPONLY = True
 if hasattr(settings,"PSESSION_REQUEST_FILTER_FUNCTION"):
     request_filter = get_callable(settings.PSESSION_REQUEST_FILTER_FUNCTION)
     settings.PSESSION_REQUEST_FILTER_FUNCTION = request_filter
@@ -226,6 +230,14 @@ class SessionFingerprint(object):
         self.last_nonce_time = 0
         self.last_key_time = now
         self.last_request_time = now
+        if request.is_secure():
+            self.make_secure_key
+        else:
+            self.secure_key = None
+
+    def make_secure_key(self):
+        seed = (randrange(0,MAX_NONCE_SEED),settings.SECRET_KEY)
+        self.secure_key = md5_constructor("%s%s" % seed).hexdigest()
 
     def check_request(self,request):
         """Check that the given request is valid for this session.
@@ -234,11 +246,19 @@ class SessionFingerprint(object):
         if the duplicate nonce window is enabled and it matches a sufficiently
         recent hash.
         """
+        if request.is_secure():
+            if self.secure_key is None:
+                self.make_secure_key()
+            else:
+                cookie_name = settings.PSESSION_SECURE_COOKIE_NAME
+                key = request.COOKIES.get(cookie_name,"")
+                if key != self.secure_key:
+                    return False
         hash = self.request_hash(request)
         if hash != self.hash:
             return False
         if settings.PSESSION_NONCE_TIMEOUT is not None:
-            nonce = request.COOKIES[settings.PSESSION_COOKIE_NAME]
+            nonce = request.COOKIES.get(settings.PSESSION_COOKIE_NAME,"")
             if nonce not in self.get_valid_nonces():
                 return False
         self.last_request_time = time.time()
@@ -271,6 +291,19 @@ class SessionFingerprint(object):
                 request.session.cycle_key()
                 self.last_key_time = now
                 request.session.modified = True
+        #  Send the secure_key if the client doens't have it yet
+        if request.is_secure():
+            cookie_name = settings.PSESSION_SECURE_COOKIE_NAME
+            if cookie_name not in request.COOKIES:
+                self.set_secure_key_cookie()
+        #  Force the session cookie to be HttpOnly.
+        #  This works even though we get called before the session cookie is
+        #  sent; fortunately SimpleCookie remembers individual settings even
+        #  if you re-assign the cookie.
+        if request.session.modified or settings.SESSION_SAVE_EVERY_REQUEST:
+            key = request.session.session_key
+            self._set_cookie(request,response,settings.SESSION_COOKIE_NAME,key)
+
             
     def request_hash(self,request):
         """Create a hash of the given request's fingerprint data.
@@ -305,12 +338,22 @@ class SessionFingerprint(object):
         yield nonces.next()
 
     def set_nonce_cookie(self,request,response):
-        """Set the nonce cookie on the given response.
+        """Set the nonce cookie on the given response."""
+        nonce = list(self.get_valid_nonces())[-2]
+        self._set_cookie(request,response,settings.PSESSION_COOKIE_NAME,nonce)
+
+    def set_secure_key_cookie(self,request,response):
+        """Set the secure-key cookie on the given response."""
+        name = settings.PSESSION_SECURE_COOKIE_NAME
+        self._set_cookie(request,response,name,self.secure_key,True)
+
+    def _set_cookie(self,request,response,name,value,secure=False):
+        """Set a session-related cookie.
 
         This duplicates the cookie-setting logic in the session middleware,
         so it will expire under the same rules as the session itself.
         """
-        nonce = list(self.get_valid_nonces())[-2]
+        secure = secure or settings.SESSION_COOKIE_SECURE
         if request.session.get_expire_at_browser_close():
             max_age = None
             expires = None
@@ -318,11 +361,13 @@ class SessionFingerprint(object):
             max_age = request.session.get_expiry_age()
             expires_time = time.time() + max_age
             expires = cookie_date(expires_time)
-        response.set_cookie(settings.PSESSION_COOKIE_NAME,nonce,
+        response.set_cookie(name,value,secure=secure,
                             max_age=max_age,expires=expires,
                             domain=settings.SESSION_COOKIE_DOMAIN,
-                            path=settings.SESSION_COOKIE_PATH,
-                            secure=settings.SESSION_COOKIE_SECURE or None)
+                            path=settings.SESSION_COOKIE_PATH)
+        if settings.PSESSION_COOKIE_HTTPONLY:
+            if "httponly" in response.cookies[name]:
+                response.cookies[name]["httponly"] = True
 
     def refresh_from_session(self,request):
         """Refresh internal data from the session store."""

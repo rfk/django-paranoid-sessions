@@ -295,7 +295,7 @@ class SessionFingerprint(object):
         if request.is_secure():
             cookie_name = settings.PSESSION_SECURE_COOKIE_NAME
             if cookie_name not in request.COOKIES:
-                self.set_secure_key_cookie()
+                self.set_secure_key_cookie(request,response)
         #  Force the session cookie to be HttpOnly.
         #  This works even though we get called before the session cookie is
         #  sent; fortunately SimpleCookie remembers individual settings even
@@ -303,7 +303,6 @@ class SessionFingerprint(object):
         if request.session.modified or settings.SESSION_SAVE_EVERY_REQUEST:
             key = request.session.session_key
             self._set_cookie(request,response,settings.SESSION_COOKIE_NAME,key)
-
             
     def request_hash(self,request):
         """Create a hash of the given request's fingerprint data.

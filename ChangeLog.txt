@@ -1,0 +1,10 @@
+
+
+0.2.0: 
+        * Add an extra session key that's only used for secure connections.
+          This keeps the secure connections secure even if the non-secure
+          session key is sniffed.
+        * Set session-related cookies to HttpOnly, if supported by Python
+
+0.1.0:
+        * Intial Release

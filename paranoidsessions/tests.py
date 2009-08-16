@@ -53,6 +53,36 @@ class TestParanoidSessions(TestCase):
     def tearDown(self):
         settings.PSESSION_CLEAR_SESSION_FUNCTION = self.orig_clear_session
 
+    @with_settings(PSESSION_SECURE_COOKIE_NAME="secureid")
+    def test_secure_key_handling(self):
+        #  No secure key given as it's not a secure request
+        r = self.client.get("/")
+        session1 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertFalse("secureid" in self.client.cookies)
+        #  Secure key generated and sent in secure cookie
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session2 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        key1 = self.client.cookies["secureid"].value
+        self.assertEquals(session1,session2)
+        self.assertTrue(self.client.cookies["secureid"]["secure"])
+        #  Additional request accepted, key not send again
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session3 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertEquals(session1,session3)
+        self.assertFalse("secureid" in r.cookies)
+        #  Insecure requests are accepted with an invalid secure key
+        self.client.cookies["secureid"] = "invalid"
+        r = self.client.get("/")
+        session4 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertEquals(session1,session4)
+        self.assertFalse("secureid" in r.cookies)
+        #  But secure requests are rejected 
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session5 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        key2 = self.client.cookies["secureid"].value
+        self.assertNotEquals(session1,session5)
+        self.assertNotEquals(key1,key2)
+
     @with_settings(PSESSION_NONCE_TIMEOUT=0)
     def test_nonce_generation(self):
         r = self.client.get("/")

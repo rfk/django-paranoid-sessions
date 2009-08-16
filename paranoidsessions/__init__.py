@@ -243,10 +243,6 @@ class SessionFingerprint(object):
         self.last_request_time = now
         self.secure_key = None
 
-    def make_secure_key(self):
-        seed = (randrange(0,MAX_NONCE_SEED),settings.SECRET_KEY)
-        self.secure_key = md5_constructor("%s%s" % seed).hexdigest()
-
     def check_request(self,request):
         """Check that the given request is valid for this session.
 
@@ -256,7 +252,9 @@ class SessionFingerprint(object):
         """
         if request.is_secure():
             if self.secure_key is None:
-                self.make_secure_key()
+                seed = (randrange(0,MAX_NONCE_SEED),settings.SECRET_KEY)
+                self.secure_key = md5_constructor("%s%s" % seed).hexdigest()
+                request.session.modified = True
             else:
                 cookie_name = settings.PSESSION_SECURE_COOKIE_NAME
                 key = request.COOKIES.get(cookie_name,"")

@@ -65,7 +65,7 @@ class TestParanoidSessions(TestCase):
         key1 = self.client.cookies["secureid"].value
         self.assertEquals(session1,session2)
         self.assertTrue(self.client.cookies["secureid"]["secure"])
-        #  Additional request accepted, key not send again
+        #  Additional request accepted, key not sent again
         r = self.client.get("/",**{"wsgi.url_scheme":"https"})
         session3 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
         self.assertEquals(session1,session3)

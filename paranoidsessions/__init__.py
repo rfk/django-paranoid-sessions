@@ -66,7 +66,7 @@ The following settings are available to tweak the behaviour of this module:
           store.  Setting it to zero means a new nonce is generated on every
           request.  Setting it to None will disable the use of nonces entirely.
 
-          Default:  0
+          Default:  1
 
 
   PSESSION_NONCE_WINDOW:  Number of nonces prior to the current nonce that will
@@ -87,7 +87,7 @@ The following settings are available to tweak the behaviour of this module:
           necessary if users will perform multiple overlapping requests.
           Setting it to None means the window never times out.
 
-          Default:  0.5
+          Default:  1
 
 
   PSESSION_KEY_TIMEOUT:  Time (in seconds) after which the session key will
@@ -160,11 +160,11 @@ if not hasattr(settings,"PSESSION_CHECK_HEADERS"):
     check_headers = ("REMOTE_ADDR","HTTP_X_FORWARDED_FOR","HTTP_USER_AGENT",)
     settings.PSESSION_CHECK_HEADERS = check_headers
 if not hasattr(settings,"PSESSION_NONCE_TIMEOUT"):
-    settings.PSESSION_NONCE_TIMEOUT = 0
+    settings.PSESSION_NONCE_TIMEOUT = 1
 if not hasattr(settings,"PSESSION_NONCE_WINDOW"):
     settings.PSESSION_NONCE_WINDOW = 1
 if not hasattr(settings,"PSESSION_NONCE_WINDOW_TIMEOUT"):
-    settings.PSESSION_NONCE_WINDOW_TIMEOUT = 0.5
+    settings.PSESSION_NONCE_WINDOW_TIMEOUT = 1
 if not hasattr(settings,"PSESSION_KEY_TIMEOUT"):
     settings.PSESSION_KEY_TIMEOUT = None
 if not hasattr(settings,"PSESSION_SESSION_KEY"):

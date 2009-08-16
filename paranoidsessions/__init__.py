@@ -230,10 +230,7 @@ class SessionFingerprint(object):
         self.last_nonce_time = 0
         self.last_key_time = now
         self.last_request_time = now
-        if request.is_secure():
-            self.make_secure_key
-        else:
-            self.secure_key = None
+        self.secure_key = None
 
     def make_secure_key(self):
         seed = (randrange(0,MAX_NONCE_SEED),settings.SECRET_KEY)
@@ -291,10 +288,12 @@ class SessionFingerprint(object):
                 request.session.cycle_key()
                 self.last_key_time = now
                 request.session.modified = True
-        #  Send the secure_key if the client doens't have it yet
+        #  Send the secure_key if the client doesn't have it yet, or has
+        #  an incorrect value.  Remember, this will only be called for
+        #  valid requests!
         if request.is_secure():
             cookie_name = settings.PSESSION_SECURE_COOKIE_NAME
-            if cookie_name not in request.COOKIES:
+            if self.secure_key != request.COOKIES.get(cookie_name,""):
                 self.set_secure_key_cookie(request,response)
         #  Force the session cookie to be HttpOnly.
         #  This works even though we get called before the session cookie is

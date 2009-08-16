@@ -76,12 +76,37 @@ class TestParanoidSessions(TestCase):
         session4 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
         self.assertEquals(session1,session4)
         self.assertFalse("secureid" in r.cookies)
-        #  But secure requests are rejected 
+        #  And with no secure key at all
+        del self.client.cookies["secureid"]
+        r = self.client.get("/")
+        session4 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertEquals(session1,session4)
+        self.assertFalse("secureid" in r.cookies)
+        #  But secure requests are rejected with an invalid key
+        self.client.cookies["secureid"] = "invalid"
         r = self.client.get("/",**{"wsgi.url_scheme":"https"})
         session5 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
         key2 = self.client.cookies["secureid"].value
         self.assertNotEquals(session1,session5)
         self.assertNotEquals(key1,key2)
+        #  Rejected session still works OK
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session6 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertEquals(session5,session6)
+        #  But is rejected again when secureid is not provided
+        del self.client.cookies["secureid"]
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session7 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertNotEquals(session5,session7)
+        #  Check that initiating a session over https works as expected
+        del self.client.cookies[settings.SESSION_COOKIE_NAME]
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session8 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertNotEquals(session8,session7)
+        r = self.client.get("/",**{"wsgi.url_scheme":"https"})
+        session9 = self.client.cookies[settings.SESSION_COOKIE_NAME].value
+        self.assertEquals(session8,session9)
+        
 
     @with_settings(PSESSION_NONCE_TIMEOUT=0)
     def test_nonce_generation(self):

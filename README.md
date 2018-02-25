@@ -1,6 +1,14 @@
 
+Status: Unmaintained
+====================
 
-  paranoidsessions:  more comprehensive security checking for Django sessions
+[![No Maintenance Intended](http://unmaintained.tech/badge.svg)](http://unmaintained.tech/)
+
+I am [no longer actively maintaining this project](https://rfk.id.au/blog/entry/archiving-open-source-projects/).
+
+
+paranoidsessions:  more comprehensive security checking for Django sessions
+===========================================================================
 
 This module implements "paranoid sessions" for Django - sessions that work
 considerably harder at security than the standard version.  Designed to make
